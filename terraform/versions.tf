@@ -30,7 +30,7 @@ terraform {
     # key     = "main/terraform.tfstate"
     # region  = "us-east-1"
     # encrypt = true
-    bucket  = "devops-assessment-dev-terraform-state-zoopj2qr"
+    bucket  = "devops-assessment-dev-terraform-state-30d11g29"
     encrypt = true
     key     = "main/terraform.tfstate"
     region  = "us-east-1"
