@@ -204,7 +204,7 @@ module "eks" {
     {
       for idx, role in var.map_roles : "role-${idx}" => {
         principal_arn = role.rolearn
-        type         = "STANDARD"
+        type          = "STANDARD"
         policy_associations = {
           admin = {
             policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -219,7 +219,7 @@ module "eks" {
     {
       for idx, user in var.map_users : "user-${idx}" => {
         principal_arn = user.userarn
-        type         = "STANDARD"
+        type          = "STANDARD"
         policy_associations = {
           admin = {
             policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"

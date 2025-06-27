@@ -3,7 +3,7 @@ project_name = "devops-assessment"
 environment  = "dev"
 
 # EKS Configuration
-cluster_version = "1.31"
+cluster_version                 = "1.31"
 cluster_endpoint_public_access  = true
 cluster_endpoint_private_access = true
 
