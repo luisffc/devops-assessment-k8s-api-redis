@@ -13,7 +13,7 @@ resource "random_string" "bucket_suffix" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "${local.name}-terraform-state-${random_string.bucket_suffix.result}"
+  bucket = "${local.name}-terraform-state-${var.bucket_suffix != "" ? var.bucket_suffix : random_string.bucket_suffix.result}"
 
   tags = merge(var.tags, {
     Name = "${local.name}-terraform-state"
@@ -139,6 +139,7 @@ resource "aws_iam_policy" "github_actions_main" {
           "ecr:SetRepositoryPolicy",
           "ecr:TagResource",
           "ecr:UntagResource",
+          "ecr:ListTagsForResource",
           "ecr:PutLifecyclePolicy",
           "ecr:GetLifecyclePolicy",
           "ecr:DeleteLifecyclePolicy"
@@ -243,6 +244,7 @@ resource "aws_iam_policy" "github_actions_main" {
           "iam:AttachRolePolicy",
           "iam:DetachRolePolicy",
           "iam:ListAttachedRolePolicies",
+          "iam:ListRolePolicies",
           "iam:CreatePolicy",
           "iam:DeletePolicy",
           "iam:GetPolicy",
@@ -312,7 +314,10 @@ resource "aws_iam_policy" "github_actions_main" {
           "logs:PutRetentionPolicy",
           "logs:TagLogGroup",
           "logs:UntagLogGroup",
-          "logs:ListTagsLogGroup"
+          "logs:ListTagsLogGroup",
+          "logs:ListTagsForResource",
+          "logs:TagResource",
+          "logs:UntagResource"
         ]
         Resource = "*"
       },
@@ -335,7 +340,10 @@ resource "aws_iam_policy" "github_actions_main" {
           "secretsmanager:PutSecretValue",
           "secretsmanager:UpdateSecret",
           "secretsmanager:TagResource",
-          "secretsmanager:UntagResource"
+          "secretsmanager:UntagResource",
+          "secretsmanager:GetResourcePolicy",
+          "secretsmanager:PutResourcePolicy",
+          "secretsmanager:DeleteResourcePolicy"
         ]
         Resource = "arn:aws:secretsmanager:${var.region}:*:secret:${local.name}-*"
       },
