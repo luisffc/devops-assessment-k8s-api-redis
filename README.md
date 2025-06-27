@@ -1,0 +1,1 @@
+# devops-assessment-k8s-api-redis
