@@ -1,0 +1,19 @@
+# Example terraform.tfvars file for bootstrap
+# Copy this to terraform.tfvars and adjust values as needed
+
+region       = "us-east-1"
+project_name = "devops-assessment"
+environment  = "dev"
+
+# GitHub Configuration (REQUIRED)
+github_org  = "your-github-org"
+github_repo = "devops-assessment-k8s-api-redis"
+
+# Tags
+tags = {
+  Terraform   = "true"
+  Project     = "devops-assessment"
+  Environment = "dev"
+  Owner       = "devops-team"
+  Purpose     = "bootstrap"
+}

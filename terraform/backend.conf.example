@@ -1,0 +1,11 @@
+# Backend configuration template
+# Copy this file to backend.conf and update values for your environment
+
+bucket = "your-terraform-state-bucket-name"
+key    = "main/terraform.tfstate"
+region = "us-east-1"
+
+# Optional additional settings:
+# dynamodb_table = "your-terraform-lock-table"
+# profile        = "your-aws-profile"
+# role_arn       = "arn:aws:iam::ACCOUNT:role/TerraformRole"

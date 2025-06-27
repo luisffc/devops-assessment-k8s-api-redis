@@ -1,0 +1,108 @@
+# Default values for api-redis-stack
+
+global:
+  storageClass: ""
+
+# API Configuration
+api:
+  name: python-api
+  replicaCount: 3 # Multiple replicas for high availability
+
+  image:
+    repository: ""  # Will be set by CI/CD
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  serviceAccount:
+    create: true
+    name: ""
+
+  podAnnotations: {}
+
+  podSecurityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 8080
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  env:
+    CACHE_TTL: "300"
+    DEBUG: "false"
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Redis Configuration
+redis:
+  enabled: true
+  auth:
+    enabled: false # No authentication needed for demo
+  architecture: standalone
+  master:
+    persistence:
+      enabled: false # No persistence needed for demo
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+  # Disable metrics since we don't have Prometheus
+  metrics:
+    enabled: false
