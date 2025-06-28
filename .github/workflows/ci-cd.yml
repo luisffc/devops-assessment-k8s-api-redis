@@ -185,7 +185,7 @@ jobs:
     - name: Template Helm chart
       run: |
         cd ${{ env.HELM_CHART_PATH }}
-        helm template test-release
+        helm template test-release .
 
   deploy:
     name: Deploy to Kubernetes
