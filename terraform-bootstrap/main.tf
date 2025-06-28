@@ -13,7 +13,7 @@ resource "random_string" "bucket_suffix" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "${local.name}-terraform-state-${var.bucket_suffix != "" ? var.bucket_suffix : random_string.bucket_suffix.result}"
+  bucket = "${local.name}-terraform-state-${random_string.bucket_suffix.result}"
 
   tags = merge(var.tags, {
     Name = "${local.name}-terraform-state"
@@ -128,17 +128,20 @@ resource "aws_iam_policy" "github_actions_main" {
         Action = [
           "ecr:BatchCheckLayerAvailability",
           "ecr:BatchGetImage",
+          "ecr:CompleteLayerUpload",
           "ecr:CreateRepository",
           "ecr:DeleteRepository",
           "ecr:DescribeRepositories",
           "ecr:GetAuthorizationToken",
           "ecr:GetDownloadUrlForLayer",
           "ecr:GetRepositoryPolicy",
+          "ecr:InitiateLayerUpload",
           "ecr:ListImages",
           "ecr:PutImage",
           "ecr:SetRepositoryPolicy",
           "ecr:TagResource",
           "ecr:UntagResource",
+          "ecr:UploadLayerPart",
           "ecr:ListTagsForResource",
           "ecr:PutLifecyclePolicy",
           "ecr:GetLifecyclePolicy",
@@ -378,7 +381,8 @@ resource "aws_iam_policy" "github_actions_main" {
         ]
         Resource = "*"
       },
-      # KMS permissions for EKS encryption
+      # Random provider doesn't require AWS permissions
+      # but we include KMS for potential future encryption needs
       {
         Effect = "Allow"
         Action = [

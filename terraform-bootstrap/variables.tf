@@ -38,9 +38,3 @@ variable "tags" {
     Purpose     = "bootstrap"
   }
 }
-
-variable "bucket_suffix" {
-  description = "Optional suffix for the S3 bucket name. If empty, a random suffix will be generated."
-  type        = string
-  default     = ""
-}

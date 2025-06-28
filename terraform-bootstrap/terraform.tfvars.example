@@ -17,6 +17,3 @@ tags = {
   Owner       = "devops-team"
   Purpose     = "bootstrap"
 }
-
-# Optional: Custom bucket suffix (leave empty to use random suffix)
-# bucket_suffix = "my-custom-suffix"
