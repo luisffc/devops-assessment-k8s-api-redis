@@ -146,7 +146,11 @@ jobs:
 
     - name: Set image reference for scanning
       id: image-ref
-      run: echo "image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:main-${{ github.sha }}" >> $GITHUB_OUTPUT
+      run: |
+        # Extract the first tag from the metadata outputs
+        FIRST_TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -n1)
+        echo "image=${FIRST_TAG}" >> $GITHUB_OUTPUT
+        echo "Scanning image: ${FIRST_TAG}"
 
     - name: Scan Docker image for vulnerabilities
       uses: aquasecurity/trivy-action@master
