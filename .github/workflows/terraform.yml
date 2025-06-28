@@ -114,9 +114,3 @@ jobs:
     - name: Terraform Destroy
       if: github.event.inputs.action == 'destroy'
       run: terraform destroy -auto-approve -input=false
-
-    - name: Output kubeconfig command
-      if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event.inputs.action == 'apply'
-      run: |
-        echo "To configure kubectl, run:"
-        terraform output -raw configure_kubectl
