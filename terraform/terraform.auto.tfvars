@@ -32,13 +32,13 @@ enable_irsa = true
 # ]
 
 # Additional IAM users to map to Kubernetes RBAC
-# map_users = [
-#   {
-#     userarn  = "arn:aws:iam::123456789012:user/admin"
-#     username = "admin"
-#     groups   = ["system:masters"]
-#   }
-# ]
+map_users = [
+  {
+    userarn  = "arn:aws:iam::593793047834:user/luis"
+    username = "luis"
+    groups   = ["system:masters"]
+  }
+]
 
 # Tags
 tags = {
