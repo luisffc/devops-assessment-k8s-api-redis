@@ -1,0 +1,25 @@
+apiVersion: v2
+name: api-redis-stack
+description: A Helm chart for Python API with Redis cache
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: redis
+    version: "18.6.1"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+
+keywords:
+  - api
+  - redis
+  - cache
+  - python
+  - flask
+
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com
+
+home: https://github.com/your-org/devops-assessment-k8s-api-redis

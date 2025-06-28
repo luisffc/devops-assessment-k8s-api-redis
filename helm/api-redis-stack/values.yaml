@@ -1,0 +1,189 @@
+# Default values for api-redis-stack
+# This is a YAML-formatted file
+
+global:
+  storageClass: ""
+
+# API Configuration
+api:
+  name: python-api
+  replicaCount: 3
+
+  image:
+    repository: ""  # Will be set by CI/CD
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+
+  podAnnotations: {}
+
+  podSecurityContext:
+    fsGroup: 1001
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 1001
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: api.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-tls
+        hosts:
+          - api.example.com
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - python-api
+            topologyKey: kubernetes.io/hostname
+
+  env:
+    - name: REDIS_HOST
+      value: "{{ include \"api-redis-stack.redis.fullname\" . }}-master"
+    - name: REDIS_PORT
+      value: "6379"
+    - name: CACHE_TTL
+      value: "300"
+    - name: DEBUG
+      value: "false"
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Redis Configuration
+redis:
+  enabled: true
+
+  auth:
+    enabled: true  # Enable authentication for production
+    existingSecret: "{{ include \"api-redis-stack.fullname\" . }}-redis-secret"
+    existingSecretPasswordKey: "password"
+
+  architecture: standalone  # or replication for HA
+
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  replica:
+    replicaCount: 1
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: ""
+      additionalLabels: {}
+
+# Network Policies
+networkPolicy:
+  enabled: true
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# AWS Secrets Manager Configuration
+secretsManager:
+  enabled: true
+  secretName: ""  # Will be set by CI/CD or during deployment
+
+# IRSA (IAM Roles for Service Accounts) Configuration
+irsa:
+  enabled: true
+  roleArn: ""  # Will be set by CI/CD or during deployment
