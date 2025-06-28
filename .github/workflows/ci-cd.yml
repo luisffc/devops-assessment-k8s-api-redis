@@ -1,0 +1,255 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+      - 'helm/**'
+      - '.github/workflows/ci-cd.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+      - 'helm/**'
+      - '.github/workflows/ci-cd.yml'
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: devops-assessment-dev
+  ECR_REPOSITORY: devops-assessment-dev-api
+  HELM_CHART_PATH: ./helm/api-redis-stack
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        cd api
+        pip install -r requirements.txt
+        pip install flake8 black isort safety bandit
+
+    - name: Lint with flake8
+      run: |
+        cd api
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Format check with black
+      run: |
+        cd api
+        black --check .
+
+    - name: Import sort check with isort
+      run: |
+        cd api
+        isort --check-only .
+
+    - name: Security check with bandit
+      run: |
+        cd api
+        bandit -r . || true
+
+    - name: Safety check
+      run: |
+        cd api
+        safety check || true
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, security-scan]
+    if: github.ref == 'refs/heads/main'
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/devops-assessment-dev-github-actions-role
+        role-session-name: GitHubActions
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: ./api
+        file: ./api/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
+
+    - name: Scan Docker image for vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-image-results.sarif'
+
+    - name: Upload image scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-image-results.sarif'
+
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.13.0'
+
+    - name: Add Bitnami Helm repository
+      run: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+    - name: Update Helm dependencies
+      run: |
+        cd ${{ env.HELM_CHART_PATH }}
+        helm dependency update
+
+    - name: Lint Helm chart
+      run: |
+        cd ${{ env.HELM_CHART_PATH }}
+        helm lint .
+
+    - name: Template Helm chart
+      run: |
+        cd ${{ env.HELM_CHART_PATH }}
+        helm template test-release . --values values.yaml > /tmp/manifests.yaml
+
+    - name: Validate Kubernetes manifests
+      uses: instrumenta/kubeval-action@master
+      with:
+        files: /tmp/manifests.yaml
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: [build-and-push, helm-lint]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/devops-assessment-dev-github-actions-role
+        role-session-name: GitHubActions
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: '1.28.0'
+
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.13.0'
+
+    - name: Add Bitnami Helm repository
+      run: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+    - name: Deploy application
+      run: |
+        cd ${{ env.HELM_CHART_PATH }}
+        helm dependency update
+
+        # Get Terraform outputs
+        REDIS_SECRET_NAME=$(aws secretsmanager list-secrets --query "SecretList[?contains(Name, 'devops-assessment-dev-redis-password')].Name" --output text)
+        API_IRSA_ROLE_ARN=$(aws iam get-role --role-name devops-assessment-dev-api-irsa --query 'Role.Arn' --output text 2>/dev/null || echo "")
+
+        helm upgrade --install api-redis . \
+          --namespace default \
+          --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
+          --set api.image.tag=main-${{ github.sha }} \
+          --set api.ingress.hosts[0].host=api.example.com \
+          --set api.ingress.tls[0].hosts[0]=api.example.com \
+          --set secretsManager.enabled=true \
+          --set secretsManager.secretName="$REDIS_SECRET_NAME" \
+          --set irsa.enabled=true \
+          --set irsa.roleArn="$API_IRSA_ROLE_ARN" \
+          --wait --timeout=10m
+
+    - name: Verify deployment
+      run: |
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=python-api --timeout=300s
+        kubectl get pods,svc,ingress
+        echo "✅ Deployment successful"
