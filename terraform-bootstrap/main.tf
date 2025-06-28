@@ -173,7 +173,15 @@ resource "aws_iam_policy" "github_actions_main" {
           "eks:ListFargateProfiles",
           "eks:CreateFargateProfile",
           "eks:DeleteFargateProfile",
-          "eks:DescribeFargateProfile"
+          "eks:DescribeFargateProfile",
+          "eks:CreateAccessEntry",
+          "eks:DeleteAccessEntry",
+          "eks:DescribeAccessEntry",
+          "eks:ListAccessEntries",
+          "eks:UpdateAccessEntry",
+          "eks:AssociateAccessPolicy",
+          "eks:DisassociateAccessPolicy",
+          "eks:ListAssociatedAccessPolicies"
         ]
         Resource = "*"
       },
@@ -230,6 +238,12 @@ resource "aws_iam_policy" "github_actions_main" {
           "ec2:CreateFlowLogs",
           "ec2:DeleteFlowLogs",
           "ec2:DescribeFlowLogs",
+          # Launch Templates for EKS Node Groups
+          "ec2:CreateLaunchTemplate",
+          "ec2:DeleteLaunchTemplate",
+          "ec2:DescribeLaunchTemplates",
+          "ec2:DescribeLaunchTemplateVersions",
+          "ec2:ModifyLaunchTemplate",
           # General describe permissions
           "ec2:DescribeAvailabilityZones",
           "ec2:DescribeVpcAttribute",
