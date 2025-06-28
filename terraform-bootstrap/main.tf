@@ -209,18 +209,27 @@ resource "aws_iam_policy" "github_actions_main" {
           "ec2:CreateSecurityGroup",
           "ec2:DeleteSecurityGroup",
           "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSecurityGroupRules",
           "ec2:AuthorizeSecurityGroupIngress",
           "ec2:AuthorizeSecurityGroupEgress",
           "ec2:RevokeSecurityGroupIngress",
           "ec2:RevokeSecurityGroupEgress",
           # Network ACLs
           "ec2:DescribeNetworkAcls",
+          "ec2:CreateNetworkAclEntry",
+          "ec2:DeleteNetworkAclEntry",
+          "ec2:ReplaceNetworkAclEntry",
           # Elastic IPs
           "ec2:AllocateAddress",
           "ec2:ReleaseAddress",
           "ec2:DescribeAddresses",
+          "ec2:DescribeAddressesAttribute",
           "ec2:AssociateAddress",
           "ec2:DisassociateAddress",
+          # VPC Flow Logs
+          "ec2:CreateFlowLogs",
+          "ec2:DeleteFlowLogs",
+          "ec2:DescribeFlowLogs",
           # General describe permissions
           "ec2:DescribeAvailabilityZones",
           "ec2:DescribeVpcAttribute",
@@ -354,18 +363,24 @@ resource "aws_iam_policy" "github_actions_main" {
         ]
         Resource = "*"
       },
-      # Random provider doesn't require AWS permissions
-      # but we include KMS for potential future encryption needs
+      # KMS permissions for EKS encryption
       {
         Effect = "Allow"
         Action = [
           "kms:CreateKey",
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
           "kms:DescribeKey",
           "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
           "kms:ListKeys",
           "kms:ListAliases",
+          "kms:ListResourceTags",
+          "kms:PutKeyPolicy",
           "kms:TagResource",
-          "kms:UntagResource"
+          "kms:UntagResource",
+          "kms:EnableKeyRotation",
+          "kms:DisableKeyRotation"
         ]
         Resource = "*"
         Condition = {

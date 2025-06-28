@@ -3,7 +3,7 @@ locals {
   region = var.region
 
   vpc_cidr = "10.0.0.0/16"
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2) # Reduced from 3 to 2 to avoid EIP limits
 
   tags = var.tags
 }
