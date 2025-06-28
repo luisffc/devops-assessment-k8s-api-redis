@@ -82,8 +82,3 @@ output "api_irsa_role_arn" {
   description = "ARN of the IAM role for API service account"
   value       = var.enable_irsa ? module.irsa_api[0].iam_role_arn : null
 }
-
-output "configure_kubectl" {
-  description = "Configure kubectl: make sure you're logged in with the correct AWS profile and run the following command to update your kubeconfig"
-  value       = try("aws eks --region ${var.region} update-kubeconfig --name ${module.eks.cluster_id}", "EKS cluster not yet created")
-}
