@@ -286,7 +286,7 @@ resource "aws_iam_policy" "github_actions_main" {
           }
         }
       },
-      # PassRole permission for EKS service roles
+      # PassRole permission for EKS, EC2, and VPC Flow Log service roles
       {
         Effect = "Allow"
         Action = [
@@ -297,7 +297,8 @@ resource "aws_iam_policy" "github_actions_main" {
           StringEquals = {
             "iam:PassedToService" = [
               "eks.amazonaws.com",
-              "ec2.amazonaws.com"
+              "ec2.amazonaws.com",
+              "vpc-flow-logs.amazonaws.com"
             ]
           }
         }

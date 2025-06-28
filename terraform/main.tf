@@ -323,7 +323,7 @@ resource "random_password" "redis_password" {
 
 # Store Redis password in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "redis_password" {
-  name                    = "${local.name}-redis-password"
+  name                    = "${local.name}-redis-secret"
   description             = "Redis password for ${local.name}"
   recovery_window_in_days = 7
 
