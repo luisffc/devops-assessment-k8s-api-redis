@@ -162,12 +162,11 @@ redis:
         cpu: 100m
         memory: 128Mi
 
+  # Disable metrics and ServiceMonitor since we don't have Prometheus operator
   metrics:
-    enabled: true
+    enabled: false
     serviceMonitor:
-      enabled: true
-      namespace: ""
-      additionalLabels: {}
+      enabled: false
 
 # Network Policies
 networkPolicy:
