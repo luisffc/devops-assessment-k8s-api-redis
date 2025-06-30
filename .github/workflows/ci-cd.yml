@@ -244,6 +244,15 @@ jobs:
         # Check if namespace exists, if not create it
         kubectl get namespace api-namespace || kubectl create namespace api-namespace
 
+        # Clean up any existing failed deployments
+        kubectl delete pods --all -n api-namespace --force --grace-period=0 || true
+        
+        # Create a simple secret for Redis password instead of using AWS Secrets Manager
+        REDIS_SECRET_NAME="api-redis-redis-secret"
+        kubectl create secret generic "$REDIS_SECRET_NAME" \
+          --from-literal=password="$(openssl rand -base64 32)" \
+          -n api-namespace --dry-run=client -o yaml | kubectl apply -f -
+
         helm upgrade --install api-redis . \
           --namespace api-namespace \
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
@@ -252,11 +261,10 @@ jobs:
           --set api.ingress.hosts[0].paths[0].path=/ \
           --set api.ingress.hosts[0].paths[0].pathType=Prefix \
           --set api.ingress.tls[0].hosts[0]=api.example.com \
-          --set secretsManager.enabled=true \
-          --set secretsManager.secretName="$REDIS_SECRET_NAME" \
-          --set irsa.enabled=true \
-          --set irsa.roleArn="$API_IRSA_ROLE_ARN" \
-          --set api.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="$API_IRSA_ROLE_ARN" \
+          --set secretsManager.enabled=false \
+          --set redis.auth.existingSecret="$REDIS_SECRET_NAME" \
+          --set redis.auth.existingSecretPasswordKey=password \
+          --set api.env[4].valueFrom.secretKeyRef.name="$REDIS_SECRET_NAME" \
           --timeout=5m
 
         # Debug: Check the deployment status

@@ -99,6 +99,11 @@ api:
       value: "{{ include \"api-redis-stack.redis.fullname\" . }}-master"
     - name: REDIS_PORT
       value: "6379"
+    - name: REDIS_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: "redis-password-secret"
+          key: "password"
     - name: CACHE_TTL
       value: "300"
     - name: DEBUG
