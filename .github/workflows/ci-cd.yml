@@ -247,6 +247,11 @@ jobs:
         # Clean up any existing failed deployments
         kubectl delete pods --all -n api-namespace --force --grace-period=0 || true
         kubectl delete deployment --all -n api-namespace || true
+        kubectl delete statefulset --all -n api-namespace || true
+        kubectl delete replicaset --all -n api-namespace || true
+        
+        # Wait a moment for cleanup
+        sleep 10
 
         # Create a simple secret for Redis password instead of using AWS Secrets Manager
         REDIS_SECRET_NAME="api-redis-redis-secret"
@@ -265,6 +270,8 @@ jobs:
           --set secretsManager.enabled=false \
           --set redis.auth.existingSecret="$REDIS_SECRET_NAME" \
           --set redis.auth.existingSecretPasswordKey=password \
+          --set redis.master.persistence.enabled=false \
+          --set redis.replica.persistence.enabled=false \
           --timeout=5m
 
         # Debug: Check the deployment status

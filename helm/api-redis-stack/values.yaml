@@ -135,7 +135,7 @@ redis:
 
   master:
     persistence:
-      enabled: true
+      enabled: false
       size: 8Gi
       storageClass: ""
 
@@ -150,7 +150,7 @@ redis:
   replica:
     replicaCount: 0
     persistence:
-      enabled: true
+      enabled: false
       size: 8Gi
       storageClass: ""
 
