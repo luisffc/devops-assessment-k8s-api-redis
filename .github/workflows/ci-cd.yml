@@ -263,10 +263,10 @@ jobs:
           --namespace api-namespace \
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
           --set api.image.tag=main-${{ github.sha }} \
-          --set api.ingress.hosts[0].host=api.example.com \
-          --set api.ingress.hosts[0].paths[0].path=/ \
-          --set api.ingress.hosts[0].paths[0].pathType=Prefix \
-          --set api.ingress.tls[0].hosts[0]=api.example.com \
+          --set api.service.type=LoadBalancer \
+          --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
+          --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
+          --set api.ingress.enabled=false \
           --set secretsManager.enabled=false \
           --set redis.auth.existingSecret="$REDIS_SECRET_NAME" \
           --set redis.auth.existingSecretPasswordKey=password \
@@ -312,6 +312,25 @@ jobs:
 
         if [ "$API_READY" -gt "0" ] && [ "$REDIS_READY" -gt "0" ]; then
           echo "✅ Deployment successful - Both API and Redis are ready"
+
+          # Get LoadBalancer endpoint
+          echo "🌐 Getting LoadBalancer endpoint..."
+          LB_HOSTNAME=$(kubectl get svc -n api-namespace api-redis-api-redis-stack-api -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "Pending")
+          LB_IP=$(kubectl get svc -n api-namespace api-redis-api-redis-stack-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+
+          if [ "$LB_HOSTNAME" != "Pending" ] && [ "$LB_HOSTNAME" != "" ]; then
+            echo "🚀 API Access URL: http://$LB_HOSTNAME"
+            echo "🔍 Health Check: http://$LB_HOSTNAME/health"
+            echo "📡 Test endpoint: http://$LB_HOSTNAME/data/test"
+          elif [ "$LB_IP" != "" ]; then
+            echo "🚀 API Access URL: http://$LB_IP"
+            echo "🔍 Health Check: http://$LB_IP/health"
+            echo "📡 Test endpoint: http://$LB_IP/data/test"
+          else
+            echo "⏳ LoadBalancer still provisioning, check again in a few minutes with:"
+            echo "kubectl get svc -n api-namespace api-redis-api-redis-stack-api"
+          fi
+
         else
           echo "❌ Deployment incomplete - API Ready: $API_READY, Redis Ready: $REDIS_READY"
           kubectl describe pods -n api-namespace | grep -A 10 -B 5 "Events:"
