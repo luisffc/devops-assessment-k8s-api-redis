@@ -161,18 +161,21 @@ def get_keys():
 @app.route("/debug", methods=["GET"])
 def debug_config():
     """Debug endpoint to show configuration (for troubleshooting only)"""
-    return jsonify({
-        "redis_host": REDIS_HOST,
-        "redis_port": REDIS_PORT,
-        "redis_password_set": bool(REDIS_PASSWORD),
-        "redis_password_file": REDIS_PASSWORD_FILE,
-        "cache_ttl": CACHE_TTL,
-        "redis_client_exists": redis_client is not None,
-        "environment_vars": {
-            k: v for k, v in os.environ.items() 
-            if k.startswith(('REDIS_', 'CACHE_', 'DEBUG'))
+    return jsonify(
+        {
+            "redis_host": REDIS_HOST,
+            "redis_port": REDIS_PORT,
+            "redis_password_set": bool(REDIS_PASSWORD),
+            "redis_password_file": REDIS_PASSWORD_FILE,
+            "cache_ttl": CACHE_TTL,
+            "redis_client_exists": redis_client is not None,
+            "environment_vars": {
+                k: v
+                for k, v in os.environ.items()
+                if k.startswith(("REDIS_", "CACHE_", "DEBUG"))
+            },
         }
-    })
+    )
 
 
 @app.errorhandler(404)
