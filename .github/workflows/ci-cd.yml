@@ -215,29 +215,37 @@ jobs:
     - name: Set up kubectl
       uses: azure/setup-kubectl@v4
 
-    - name: Update kubeconfig
-      run: |
-        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
-
     - name: Set up Helm
       uses: azure/setup-helm@v4
       with:
         version: '3.13.0'
 
+    - name: Update kubeconfig for EKS
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+        
+        # Verify connection
+        kubectl get nodes
+
     - name: Add Bitnami Helm repository
-      run: helm repo add bitnami https://charts.bitnami.com/bitnami
+      run: |
+        helm repo add bitnami https://charts.bitnami.com/bitnami
+        helm repo update
 
     - name: Deploy application
       run: |
         cd ${{ env.HELM_CHART_PATH }}
         helm dependency update
 
-        # Get Terraform outputs
-        REDIS_SECRET_NAME=$(aws secretsmanager list-secrets --query "SecretList[?contains(Name, 'devops-assessment-dev-redis-password')].Name" --output text)
-        API_IRSA_ROLE_ARN=$(aws iam get-role --role-name devops-assessment-dev-api-irsa --query 'Role.Arn' --output text 2>/dev/null || echo "")
+        # Get the correct secret name from Terraform outputs format
+        REDIS_SECRET_NAME="devops-assessment-dev-redis-secret"
+        API_IRSA_ROLE_ARN="arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/devops-assessment-dev-api-irsa"
+
+        # Check if namespace exists, if not create it
+        kubectl get namespace api-namespace || kubectl create namespace api-namespace
 
         helm upgrade --install api-redis . \
-          --namespace default \
+          --namespace api-namespace \
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
           --set api.image.tag=main-${{ github.sha }} \
           --set api.ingress.hosts[0].host=api.example.com \
@@ -250,6 +258,6 @@ jobs:
 
     - name: Verify deployment
       run: |
-        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=python-api --timeout=300s
-        kubectl get pods,svc,ingress
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=python-api -n api-namespace --timeout=300s
+        kubectl get pods,svc,ingress -n api-namespace
         echo "✅ Deployment successful"
