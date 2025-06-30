@@ -37,7 +37,7 @@ variable "cluster_endpoint_private_access" {
 variable "node_group_instance_types" {
   description = "EC2 instance types for the EKS node group"
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.large"]  # Upgraded for more ENI capacity
 }
 
 variable "node_group_scaling_config" {
@@ -48,9 +48,9 @@ variable "node_group_scaling_config" {
     min_size     = number
   })
   default = {
-    desired_size = 3
-    max_size     = 10
-    min_size     = 1
+    desired_size = 2  # Increased minimum nodes
+    max_size     = 6  # Reasonable max for assessment
+    min_size     = 2  # Ensure we always have 2 nodes minimum
   }
 }
 
