@@ -10,14 +10,6 @@ provider "aws" {
 # Get current AWS caller identity
 data "aws_caller_identity" "current" {}
 
-# Get available availability zones
-data "aws_availability_zones" "available" {
-  filter {
-    name   = "opt-in-status"
-    values = ["opt-in-not-required"]
-  }
-}
-
 # Configure Kubernetes provider
 provider "kubernetes" {
   host                   = try(module.eks.cluster_endpoint, "")

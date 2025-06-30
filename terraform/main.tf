@@ -229,6 +229,21 @@ module "eks" {
           }
         }
       }
+    },
+    # GitHub Actions role for CI/CD access
+    {
+      github_actions = {
+        principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.name}-github-actions-role"
+        type          = "STANDARD"
+        policy_associations = {
+          admin = {
+            policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+            access_scope = {
+              type = "cluster"
+            }
+          }
+        }
+      }
     }
   )
 
@@ -585,4 +600,85 @@ resource "helm_release" "aws_secrets_manager_csi" {
   chart      = "secrets-store-csi-driver-provider-aws"
   namespace  = "kube-system"
   version    = "0.3.4"
+}
+
+################################################################################
+# Additional VPC Endpoints (these create ENIs)
+################################################################################
+
+# VPC Endpoints for EKS - these create ENIs that need to be tracked
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = module.vpc.vpc_id
+  service_name = "com.amazonaws.${var.region}.s3"
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-s3-endpoint"
+  })
+}
+
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id              = module.vpc.vpc_id
+  service_name        = "com.amazonaws.${var.region}.ecr.api"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = module.vpc.private_subnets
+  security_group_ids  = [aws_security_group.vpc_endpoint.id]
+
+  private_dns_enabled = true
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-ecr-api-endpoint"
+  })
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id              = module.vpc.vpc_id
+  service_name        = "com.amazonaws.${var.region}.ecr.dkr"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = module.vpc.private_subnets
+  security_group_ids  = [aws_security_group.vpc_endpoint.id]
+
+  private_dns_enabled = true
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-ecr-dkr-endpoint"
+  })
+}
+
+resource "aws_vpc_endpoint" "ec2" {
+  vpc_id              = module.vpc.vpc_id
+  service_name        = "com.amazonaws.${var.region}.ec2"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = module.vpc.private_subnets
+  security_group_ids  = [aws_security_group.vpc_endpoint.id]
+
+  private_dns_enabled = true
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-ec2-endpoint"
+  })
+}
+
+# Security group for VPC endpoints
+resource "aws_security_group" "vpc_endpoint" {
+  name_prefix = "${local.name}-vpc-endpoint-"
+  vpc_id      = module.vpc.vpc_id
+  description = "Security group for VPC endpoints"
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [local.vpc_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.tags, {
+    Name = "${local.name}-vpc-endpoint-sg"
+  })
 }

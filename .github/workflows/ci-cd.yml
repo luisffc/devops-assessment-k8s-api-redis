@@ -249,7 +249,7 @@ jobs:
         kubectl delete deployment --all -n api-namespace || true
         kubectl delete statefulset --all -n api-namespace || true
         kubectl delete replicaset --all -n api-namespace || true
-        
+
         # Wait a moment for cleanup
         sleep 10
 
@@ -262,7 +262,8 @@ jobs:
         helm upgrade --install api-redis . \
           --namespace api-namespace \
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
-          --set api.image.tag=latest \
+          --set api.image.tag=v2 \
+          --set api.image.pullPolicy=Always \
           --set api.ingress.hosts[0].host=api.example.com \
           --set api.ingress.hosts[0].paths[0].path=/ \
           --set api.ingress.hosts[0].paths[0].pathType=Prefix \
@@ -285,6 +286,10 @@ jobs:
         # Check pod logs if any pods exist
         echo "🔍 Checking pod logs..."
         kubectl get pods -n api-namespace -o name | head -3 | xargs -I {} kubectl logs {} -n api-namespace --tail=50 || true
+
+        # Debug: Check if the latest image has the right dependencies
+        echo "🔍 Debugging image dependencies..."
+        kubectl get pods -n api-namespace -l app.kubernetes.io/name=python-api -o name | head -1 | xargs -I {} kubectl exec {} -n api-namespace -- pip list | grep gunicorn || echo "Gunicorn not found in container"
 
     - name: Verify deployment
       run: |

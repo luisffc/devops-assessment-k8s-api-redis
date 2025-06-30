@@ -82,3 +82,33 @@ output "api_irsa_role_arn" {
   description = "ARN of the IAM role for API service account"
   value       = var.enable_irsa ? module.irsa_api[0].iam_role_arn : null
 }
+
+# ENI tracking outputs
+output "all_vpc_enis" {
+  description = "All ENIs in the VPC"
+  value       = data.aws_network_interfaces.all_vpc_enis.ids
+}
+
+output "eks_enis" {
+  description = "ENIs created by EKS cluster"
+  value       = data.aws_network_interfaces.eks_enis.ids
+}
+
+output "nat_gateway_enis" {
+  description = "ENIs created by NAT Gateways"
+  value       = data.aws_network_interfaces.nat_gateway_enis.ids
+}
+
+output "kubernetes_lb_enis" {
+  description = "ENIs created by Kubernetes Load Balancers"
+  value       = data.aws_network_interfaces.kubernetes_lb_enis.ids
+}
+
+output "vpc_endpoint_enis" {
+  description = "ENI IDs for VPC endpoints"
+  value = {
+    ecr_api = aws_vpc_endpoint.ecr_api.network_interface_ids
+    ecr_dkr = aws_vpc_endpoint.ecr_dkr.network_interface_ids
+    ec2     = aws_vpc_endpoint.ec2.network_interface_ids
+  }
+}
