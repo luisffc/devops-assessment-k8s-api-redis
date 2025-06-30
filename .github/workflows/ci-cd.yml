@@ -237,10 +237,6 @@ jobs:
         cd ${{ env.HELM_CHART_PATH }}
         helm dependency update
 
-        # Extract the image tag from the build job output
-        IMAGE_TAG=$(echo '${{ needs.build-and-push.outputs.image-tag }}' | head -n1 | cut -d':' -f2)
-        echo "Using image tag: $IMAGE_TAG"
-
         # Get the correct secret name from Terraform outputs format
         REDIS_SECRET_NAME="devops-assessment-dev-redis-secret"
         API_IRSA_ROLE_ARN="arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/devops-assessment-dev-api-irsa"
@@ -266,8 +262,7 @@ jobs:
         helm upgrade --install api-redis . \
           --namespace api-namespace \
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
-          --set api.image.tag="$IMAGE_TAG" \
-          --set api.image.pullPolicy=Always \
+          --set api.image.tag=main-${{ github.sha }} \
           --set api.ingress.hosts[0].host=api.example.com \
           --set api.ingress.hosts[0].paths[0].path=/ \
           --set api.ingress.hosts[0].paths[0].pathType=Prefix \
