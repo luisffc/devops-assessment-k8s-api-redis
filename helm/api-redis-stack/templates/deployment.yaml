@@ -45,7 +45,7 @@ spec:
             {{- toYaml .Values.api.resources | nindent 12 }}
           env:
             - name: REDIS_HOST
-              value: "{{ include "api-redis-stack.redis.fullname" . }}-master"
+              value: "{{ include "api-redis-stack.redis.fullname" . }}"
             - name: REDIS_PORT
               value: "6379"
             - name: CACHE_TTL

@@ -121,7 +121,7 @@ redis:
 
   auth:
     enabled: true  # Enable authentication for production
-    existingSecret: "{{ include \"api-redis-stack.fullname\" . }}-redis-secret"
+    existingSecret: ""  # Will be set by CI/CD
     existingSecretPasswordKey: "password"
 
   architecture: standalone  # or replication for HA
