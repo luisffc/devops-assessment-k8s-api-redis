@@ -33,7 +33,11 @@ if REDIS_PASSWORD_FILE and os.path.exists(REDIS_PASSWORD_FILE):
         logger.error(f"Failed to read Redis password from file: {e}")
 
 # Initialize Redis connection
+redis_client = None
 try:
+    logger.info(f"Attempting to connect to Redis at {REDIS_HOST}:{REDIS_PORT}")
+    logger.info(f"Redis password provided: {'Yes' if REDIS_PASSWORD else 'No'}")
+
     redis_client = redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
@@ -45,28 +49,44 @@ try:
     )
     # Test connection
     redis_client.ping()
-    logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
+    logger.info(f"Successfully connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
 except redis.ConnectionError as e:
     logger.error(f"Failed to connect to Redis: {e}")
+    redis_client = None
+except Exception as e:
+    logger.error(f"Unexpected error connecting to Redis: {e}")
     redis_client = None
 
 
 @app.route("/health", methods=["GET"])
 def health_check():
     """Health check endpoint"""
-    redis_status = (
-        "connected" if redis_client and redis_client.ping() else "disconnected"
-    )
+    redis_status = "disconnected"
+    redis_error = None
+
+    if redis_client:
+        try:
+            redis_client.ping()
+            redis_status = "connected"
+        except Exception as e:
+            redis_error = str(e)
+            logger.error(f"Redis ping failed: {e}")
+
+    response_data = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "redis_status": redis_status,
+        "redis_host": REDIS_HOST,
+        "redis_port": REDIS_PORT,
+        "redis_password_set": bool(REDIS_PASSWORD),
+        "version": "1.0.0",
+    }
+
+    if redis_error:
+        response_data["redis_error"] = redis_error
 
     return (
-        jsonify(
-            {
-                "status": "healthy",
-                "timestamp": datetime.utcnow().isoformat(),
-                "redis_status": redis_status,
-                "version": "1.0.0",
-            }
-        ),
+        jsonify(response_data),
         200,
     )
 
