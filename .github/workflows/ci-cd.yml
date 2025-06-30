@@ -256,6 +256,7 @@ jobs:
           --set secretsManager.secretName="$REDIS_SECRET_NAME" \
           --set irsa.enabled=true \
           --set irsa.roleArn="$API_IRSA_ROLE_ARN" \
+          --set api.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="$API_IRSA_ROLE_ARN" \
           --timeout=5m
 
         # Debug: Check the deployment status

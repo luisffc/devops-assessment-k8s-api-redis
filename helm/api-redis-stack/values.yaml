@@ -7,7 +7,7 @@ global:
 # API Configuration
 api:
   name: python-api
-  replicaCount: 3
+  replicaCount: 1
 
   image:
     repository: ""  # Will be set by CI/CD
@@ -64,16 +64,16 @@ api:
 
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
-    requests:
-      cpu: 250m
+      cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 
   autoscaling:
-    enabled: true
-    minReplicas: 3
-    maxReplicas: 10
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
 
@@ -141,14 +141,14 @@ redis:
 
     resources:
       limits:
-        cpu: 250m
+        cpu: 200m
         memory: 256Mi
       requests:
-        cpu: 100m
+        cpu: 50m
         memory: 128Mi
 
   replica:
-    replicaCount: 1
+    replicaCount: 0
     persistence:
       enabled: true
       size: 8Gi
@@ -156,10 +156,10 @@ redis:
 
     resources:
       limits:
-        cpu: 250m
+        cpu: 200m
         memory: 256Mi
       requests:
-        cpu: 100m
+        cpu: 50m
         memory: 128Mi
 
   # Disable metrics and ServiceMonitor since we don't have Prometheus operator
