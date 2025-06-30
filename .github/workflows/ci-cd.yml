@@ -125,7 +125,7 @@ jobs:
         images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
         tags: |
           type=ref,event=branch
-          type=sha,prefix={{branch}}-
+          type=sha,,format=long,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Set up Docker Buildx
