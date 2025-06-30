@@ -223,7 +223,7 @@ jobs:
     - name: Update kubeconfig for EKS
       run: |
         aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
-        
+
         # Verify connection
         kubectl get nodes
 
@@ -256,10 +256,44 @@ jobs:
           --set secretsManager.secretName="$REDIS_SECRET_NAME" \
           --set irsa.enabled=true \
           --set irsa.roleArn="$API_IRSA_ROLE_ARN" \
-          --wait --timeout=10m
+          --timeout=5m
+
+        # Debug: Check the deployment status
+        echo "🔍 Checking deployment status..."
+        kubectl get pods,svc,ingress -n api-namespace -o wide
+        
+        # Check events for any issues
+        echo "🔍 Checking recent events..."
+        kubectl get events -n api-namespace --sort-by='.lastTimestamp' | tail -10
+        
+        # Check pod logs if any pods exist
+        echo "🔍 Checking pod logs..."
+        kubectl get pods -n api-namespace -o name | head -3 | xargs -I {} kubectl logs {} -n api-namespace --tail=50 || true
 
     - name: Verify deployment
       run: |
-        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=python-api -n api-namespace --timeout=300s
-        kubectl get pods,svc,ingress -n api-namespace
-        echo "✅ Deployment successful"
+        echo "🔍 Final deployment verification..."
+        
+        # Wait for Redis to be ready first
+        echo "⏳ Waiting for Redis to be ready..."
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n api-namespace --timeout=300s || true
+        
+        # Wait for API to be ready
+        echo "⏳ Waiting for API to be ready..."
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=python-api -n api-namespace --timeout=300s || true
+        
+        # Check final status
+        echo "📊 Final status:"
+        kubectl get pods,svc,ingress -n api-namespace -o wide
+        
+        # Check if deployment was successful
+        API_READY=$(kubectl get pods -n api-namespace -l app.kubernetes.io/name=python-api -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' | grep -c "True" || echo "0")
+        REDIS_READY=$(kubectl get pods -n api-namespace -l app.kubernetes.io/name=redis -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' | grep -c "True" || echo "0")
+        
+        if [ "$API_READY" -gt "0" ] && [ "$REDIS_READY" -gt "0" ]; then
+          echo "✅ Deployment successful - Both API and Redis are ready"
+        else
+          echo "❌ Deployment incomplete - API Ready: $API_READY, Redis Ready: $REDIS_READY"
+          kubectl describe pods -n api-namespace | grep -A 10 -B 5 "Events:"
+          exit 1
+        fi
