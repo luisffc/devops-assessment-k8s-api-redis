@@ -48,6 +48,12 @@ spec:
             {{- if .Values.secretsManager.enabled }}
             - name: REDIS_PASSWORD_FILE
               value: "/etc/secrets/redis-password"
+            {{- else }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redis.auth.existingSecret | default "api-redis-redis-secret" }}
+                  key: {{ .Values.redis.auth.existingSecretPasswordKey | default "password" }}
             {{- end }}
           {{- if .Values.secretsManager.enabled }}
           volumeMounts:
