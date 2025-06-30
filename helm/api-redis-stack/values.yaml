@@ -95,14 +95,8 @@ api:
             topologyKey: kubernetes.io/hostname
 
   env:
-    - name: REDIS_HOST
-      value: "{{ include \"api-redis-stack.redis.fullname\" . }}-master"
-    - name: REDIS_PORT
-      value: "6379"
-    - name: CACHE_TTL
-      value: "300"
-    - name: DEBUG
-      value: "false"
+    CACHE_TTL: "300"
+    DEBUG: "false"
 
   livenessProbe:
     httpGet:
