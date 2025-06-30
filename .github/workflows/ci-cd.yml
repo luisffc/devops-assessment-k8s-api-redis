@@ -249,6 +249,8 @@ jobs:
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
           --set api.image.tag=main-${{ github.sha }} \
           --set api.ingress.hosts[0].host=api.example.com \
+          --set api.ingress.hosts[0].paths[0].path=/ \
+          --set api.ingress.hosts[0].paths[0].pathType=Prefix \
           --set api.ingress.tls[0].hosts[0]=api.example.com \
           --set secretsManager.enabled=true \
           --set secretsManager.secretName="$REDIS_SECRET_NAME" \
