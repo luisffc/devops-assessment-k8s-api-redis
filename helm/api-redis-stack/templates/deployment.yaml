@@ -52,31 +52,6 @@ spec:
               value: "{{ .Values.api.env.CACHE_TTL | default "300" }}"
             - name: DEBUG
               value: "{{ .Values.api.env.DEBUG | default "false" }}"
-            {{- if .Values.secretsManager.enabled }}
-            - name: REDIS_PASSWORD_FILE
-              value: "/etc/secrets/redis-password"
-            {{- else if .Values.redis.auth.enabled }}
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.redis.auth.existingSecret | default (printf "%s-redis-secret" (include "api-redis-stack.fullname" .)) }}
-                  key: {{ .Values.redis.auth.existingSecretPasswordKey | default "password" }}
-            {{- end }}
-          {{- if .Values.secretsManager.enabled }}
-          volumeMounts:
-            - name: redis-secret
-              mountPath: "/etc/secrets"
-              readOnly: true
-          {{- end }}
-      {{- if .Values.secretsManager.enabled }}
-      volumes:
-        - name: redis-secret
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ include "api-redis-stack.fullname" . }}-redis-secret
-      {{- end }}
       {{- with .Values.api.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

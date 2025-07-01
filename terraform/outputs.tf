@@ -68,16 +68,6 @@ output "github_actions_role_arn" {
   value       = replace(data.aws_iam_openid_connect_provider.github_actions.arn, ":oidc-provider/token.actions.githubusercontent.com", ":role/${var.project_name}-${var.environment}-github-actions-role")
 }
 
-output "redis_secret_arn" {
-  description = "ARN of the Redis password secret in AWS Secrets Manager"
-  value       = aws_secretsmanager_secret.redis_password.arn
-}
-
-output "redis_secret_name" {
-  description = "Name of the Redis password secret in AWS Secrets Manager"
-  value       = aws_secretsmanager_secret.redis_password.name
-}
-
 output "api_irsa_role_arn" {
   description = "ARN of the IAM role for API service account"
   value       = var.enable_irsa ? module.irsa_api[0].iam_role_arn : null

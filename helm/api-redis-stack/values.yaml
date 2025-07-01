@@ -121,7 +121,7 @@ redis:
 
   auth:
     enabled: false  # Disable authentication for now to get basic functionality working
-    existingSecret: ""  
+    existingSecret: ""
     existingSecretPasswordKey: "password"
 
   architecture: standalone  # or replication for HA
@@ -169,13 +169,3 @@ networkPolicy:
 podDisruptionBudget:
   enabled: true
   minAvailable: 2
-
-# AWS Secrets Manager Configuration
-secretsManager:
-  enabled: true
-  secretName: ""  # Will be set by CI/CD or during deployment
-
-# IRSA (IAM Roles for Service Accounts) Configuration
-irsa:
-  enabled: true
-  roleArn: ""  # Will be set by CI/CD or during deployment

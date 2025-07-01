@@ -327,31 +327,6 @@ resource "aws_ecr_lifecycle_policy" "api" {
 }
 
 ################################################################################
-# AWS Secrets Manager
-################################################################################
-
-# Generate a random password for Redis
-resource "random_password" "redis_password" {
-  length  = 32
-  special = true
-}
-
-# Store Redis password in AWS Secrets Manager
-resource "aws_secretsmanager_secret" "redis_password" {
-  name                    = "${local.name}-redis-secret"
-  description             = "Redis password for ${local.name}"
-  recovery_window_in_days = 7
-
-  tags = local.tags
-}
-
-resource "aws_secretsmanager_secret_version" "redis_password" {
-  secret_id = aws_secretsmanager_secret.redis_password.id
-  secret_string = jsonencode({
-    password = random_password.redis_password.result
-  })
-}
-
 ################################################################################
 # Additional IAM Role for EKS Deployments
 ################################################################################
@@ -384,43 +359,7 @@ module "irsa_api" {
     }
   }
 
-  # Allow API pods to read secrets from AWS Secrets Manager
-  role_policy_arns = {
-    SecretsManagerReadOnly = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
-  }
-
   tags = local.tags
-}
-
-# Custom policy for reading specific Redis secret
-resource "aws_iam_policy" "api_secrets_policy" {
-  count = var.enable_irsa ? 1 : 0
-
-  name        = "${local.name}-api-secrets-policy"
-  description = "Policy for API to read Redis password from Secrets Manager"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ]
-        Resource = aws_secretsmanager_secret.redis_password.arn
-      }
-    ]
-  })
-
-  tags = local.tags
-}
-
-resource "aws_iam_role_policy_attachment" "api_secrets_policy" {
-  count = var.enable_irsa ? 1 : 0
-
-  role       = module.irsa_api[0].iam_role_name
-  policy_arn = aws_iam_policy.api_secrets_policy[0].arn
 }
 
 ################################################################################
@@ -548,58 +487,6 @@ resource "helm_release" "metrics_server" {
     name  = "args"
     value = "{--kubelet-insecure-tls}"
   }
-}
-
-# AWS Secrets Store CSI Driver
-module "secrets_store_csi_driver_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.39"
-
-  role_name = "${local.name}-secrets-store-csi-driver"
-
-  oidc_providers = {
-    ex = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:secrets-store-csi-driver"]
-    }
-  }
-
-  # Policy for the CSI driver to access Secrets Manager
-  role_policy_arns = {
-    SecretsManagerReadOnly = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
-  }
-
-  tags = local.tags
-}
-
-resource "helm_release" "secrets_store_csi_driver" {
-  depends_on = [module.eks]
-
-  name       = "secrets-store-csi-driver"
-  repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
-  chart      = "secrets-store-csi-driver"
-  namespace  = "kube-system"
-  version    = "1.3.4"
-
-  set {
-    name  = "syncSecret.enabled"
-    value = "true"
-  }
-
-  set {
-    name  = "enableSecretRotation"
-    value = "true"
-  }
-}
-
-resource "helm_release" "aws_secrets_manager_csi" {
-  depends_on = [helm_release.secrets_store_csi_driver]
-
-  name       = "secrets-store-csi-driver-provider-aws"
-  repository = "https://aws.github.io/secrets-store-csi-driver-provider-aws"
-  chart      = "secrets-store-csi-driver-provider-aws"
-  namespace  = "kube-system"
-  version    = "0.3.4"
 }
 
 ################################################################################

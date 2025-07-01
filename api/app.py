@@ -20,17 +20,7 @@ app = Flask(__name__)
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
-REDIS_PASSWORD_FILE = os.environ.get("REDIS_PASSWORD_FILE", None)
 CACHE_TTL = int(os.environ.get("CACHE_TTL", 300))  # 5 minutes default
-
-# Read Redis password from file if provided (AWS Secrets Manager)
-if REDIS_PASSWORD_FILE and os.path.exists(REDIS_PASSWORD_FILE):
-    try:
-        with open(REDIS_PASSWORD_FILE, "r") as f:
-            REDIS_PASSWORD = f.read().strip()
-        logger.info("Redis password loaded from file")
-    except Exception as e:
-        logger.error(f"Failed to read Redis password from file: {e}")
 
 # Initialize Redis connection with retry logic
 redis_client = None
@@ -193,7 +183,6 @@ def debug_config():
         "redis_host": REDIS_HOST,
         "redis_port": REDIS_PORT,
         "redis_password_set": bool(REDIS_PASSWORD),
-        "redis_password_file": REDIS_PASSWORD_FILE,
         "cache_ttl": CACHE_TTL,
         "redis_client_exists": redis_client is not None,
         "environment_vars": {

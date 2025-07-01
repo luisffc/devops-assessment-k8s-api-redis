@@ -237,10 +237,6 @@ jobs:
         cd ${{ env.HELM_CHART_PATH }}
         helm dependency update
 
-        # Get the correct secret name from Terraform outputs format
-        REDIS_SECRET_NAME="devops-assessment-dev-redis-secret"
-        API_IRSA_ROLE_ARN="arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/devops-assessment-dev-api-irsa"
-
         # Check if namespace exists, if not create it
         kubectl get namespace api-namespace || kubectl create namespace api-namespace
 
@@ -261,8 +257,6 @@ jobs:
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
           --set api.ingress.enabled=false \
-          --set secretsManager.enabled=false \
-          --set redis.auth.enabled=false \
           --set redis.master.persistence.enabled=false \
           --set redis.replica.persistence.enabled=false \
           --timeout=5m
