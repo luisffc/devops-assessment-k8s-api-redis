@@ -120,7 +120,7 @@ redis:
   enabled: true
 
   auth:
-    enabled: true  # Enable authentication for production
+    enabled: false
     existingSecret: ""  # Will be set by CI/CD
     existingSecretPasswordKey: "password"
 
