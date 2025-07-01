@@ -59,7 +59,7 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.redis.auth.existingSecret | default "api-redis-redis-secret" }}
+                  name: {{ .Values.redis.auth.existingSecret | default (printf "%s-redis-secret" (include "api-redis-stack.fullname" .)) }}
                   key: {{ .Values.redis.auth.existingSecretPasswordKey | default "password" }}
             {{- end }}
           {{- if .Values.secretsManager.enabled }}

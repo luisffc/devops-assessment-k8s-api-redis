@@ -120,8 +120,8 @@ redis:
   enabled: true
 
   auth:
-    enabled: false
-    existingSecret: ""  # Will be set by CI/CD
+    enabled: true  # Enable authentication
+    existingSecret: ""  # Will use the secret created by SecretProviderClass
     existingSecretPasswordKey: "password"
 
   architecture: standalone  # or replication for HA

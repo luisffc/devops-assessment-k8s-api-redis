@@ -253,12 +253,6 @@ jobs:
         # Wait a moment for cleanup
         sleep 10
 
-        # Create a simple secret for Redis password instead of using AWS Secrets Manager
-        REDIS_SECRET_NAME="api-redis-redis-secret"
-        kubectl create secret generic "$REDIS_SECRET_NAME" \
-          --from-literal=password="$(openssl rand -base64 32)" \
-          -n api-namespace --dry-run=client -o yaml | kubectl apply -f -
-
         helm upgrade --install api-redis . \
           --namespace api-namespace \
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
@@ -267,8 +261,11 @@ jobs:
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
           --set api.ingress.enabled=false \
-          --set secretsManager.enabled=false \
-          --set redis.auth.existingSecret="$REDIS_SECRET_NAME" \
+          --set secretsManager.enabled=true \
+          --set secretsManager.secretName="$REDIS_SECRET_NAME" \
+          --set irsa.roleArn="$API_IRSA_ROLE_ARN" \
+          --set redis.auth.enabled=true \
+          --set redis.auth.existingSecret="api-redis-api-redis-stack-redis-secret" \
           --set redis.auth.existingSecretPasswordKey=password \
           --set redis.master.persistence.enabled=false \
           --set redis.replica.persistence.enabled=false \
