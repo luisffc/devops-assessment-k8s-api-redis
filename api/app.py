@@ -32,30 +32,50 @@ if REDIS_PASSWORD_FILE and os.path.exists(REDIS_PASSWORD_FILE):
     except Exception as e:
         logger.error(f"Failed to read Redis password from file: {e}")
 
-# Initialize Redis connection
+# Initialize Redis connection with retry logic
 redis_client = None
-try:
-    logger.info(f"Attempting to connect to Redis at {REDIS_HOST}:{REDIS_PORT}")
-    logger.info(f"Redis password provided: {'Yes' if REDIS_PASSWORD else 'No'}")
+redis_connection_error = None
 
-    redis_client = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        password=REDIS_PASSWORD,
-        decode_responses=True,
-        socket_connect_timeout=5,
-        socket_timeout=5,
-        retry_on_timeout=True,
-    )
-    # Test connection
-    redis_client.ping()
-    logger.info(f"Successfully connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
-except redis.ConnectionError as e:
-    logger.error(f"Failed to connect to Redis: {e}")
-    redis_client = None
-except Exception as e:
-    logger.error(f"Unexpected error connecting to Redis: {e}")
-    redis_client = None
+
+def connect_to_redis():
+    """Attempt to connect to Redis with error details"""
+    global redis_client, redis_connection_error
+
+    try:
+        logger.info(f"Attempting to connect to Redis at {REDIS_HOST}:{REDIS_PORT}")
+        logger.info(f"Redis password provided: {'Yes' if REDIS_PASSWORD else 'No'}")
+
+        client = redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            password=REDIS_PASSWORD,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+            retry_on_timeout=True,
+        )
+        # Test connection
+        client.ping()
+        logger.info(f"Successfully connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
+        redis_client = client
+        redis_connection_error = None
+        return True
+    except redis.ConnectionError as e:
+        error_msg = f"Failed to connect to Redis: {e}"
+        logger.error(error_msg)
+        redis_connection_error = error_msg
+        redis_client = None
+        return False
+    except Exception as e:
+        error_msg = f"Unexpected error connecting to Redis: {e}"
+        logger.error(error_msg)
+        redis_connection_error = error_msg
+        redis_client = None
+        return False
+
+
+# Try initial connection
+connect_to_redis()
 
 
 @app.route("/health", methods=["GET"])
@@ -64,6 +84,10 @@ def health_check():
     redis_status = "disconnected"
     redis_error = None
 
+    # If redis_client doesn't exist, try to connect
+    if not redis_client:
+        connect_to_redis()
+
     if redis_client:
         try:
             redis_client.ping()
@@ -71,6 +95,8 @@ def health_check():
         except Exception as e:
             redis_error = str(e)
             logger.error(f"Redis ping failed: {e}")
+            # Try to reconnect on ping failure
+            connect_to_redis()
 
     response_data = {
         "status": "healthy",
@@ -84,6 +110,8 @@ def health_check():
 
     if redis_error:
         response_data["redis_error"] = redis_error
+    if redis_connection_error:
+        response_data["redis_connection_error"] = redis_connection_error
 
     return (
         jsonify(response_data),
@@ -161,19 +189,36 @@ def get_keys():
 @app.route("/debug", methods=["GET"])
 def debug_config():
     """Debug endpoint to show configuration (for troubleshooting only)"""
+    debug_data = {
+        "redis_host": REDIS_HOST,
+        "redis_port": REDIS_PORT,
+        "redis_password_set": bool(REDIS_PASSWORD),
+        "redis_password_file": REDIS_PASSWORD_FILE,
+        "cache_ttl": CACHE_TTL,
+        "redis_client_exists": redis_client is not None,
+        "environment_vars": {
+            k: v
+            for k, v in os.environ.items()
+            if k.startswith(("REDIS_", "CACHE_", "DEBUG"))
+        },
+    }
+
+    if redis_connection_error:
+        debug_data["redis_connection_error"] = redis_connection_error
+
+    return jsonify(debug_data)
+
+
+@app.route("/redis/reconnect", methods=["POST"])
+def reconnect_redis():
+    """Attempt to reconnect to Redis"""
+    success = connect_to_redis()
     return jsonify(
         {
-            "redis_host": REDIS_HOST,
-            "redis_port": REDIS_PORT,
-            "redis_password_set": bool(REDIS_PASSWORD),
-            "redis_password_file": REDIS_PASSWORD_FILE,
-            "cache_ttl": CACHE_TTL,
+            "success": success,
             "redis_client_exists": redis_client is not None,
-            "environment_vars": {
-                k: v
-                for k, v in os.environ.items()
-                if k.startswith(("REDIS_", "CACHE_", "DEBUG"))
-            },
+            "redis_connection_error": redis_connection_error,
+            "timestamp": datetime.utcnow().isoformat(),
         }
     )
 
