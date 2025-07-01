@@ -120,11 +120,9 @@ redis:
   enabled: true
 
   auth:
-    enabled: false  # Disable authentication for now to get basic functionality working
-    existingSecret: ""
-    existingSecretPasswordKey: "password"
+    enabled: false # Disable authentication for fast setup
 
-  architecture: standalone  # or replication for HA
+  architecture: standalone
 
   master:
     persistence:
