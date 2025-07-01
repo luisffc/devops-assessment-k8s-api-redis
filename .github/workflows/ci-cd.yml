@@ -125,7 +125,7 @@ jobs:
         images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
         tags: |
           type=ref,event=branch
-          type=sha,,format=long,prefix={{branch}}-
+          type=sha,format=long,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Set up Docker Buildx
@@ -227,7 +227,17 @@ jobs:
         # Verify connection
         kubectl get nodes
 
+    - name: Update kubeconfig for EKS
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+        # Verify connection
+        kubectl get nodes
+
     - name: Add Bitnami Helm repository
+      run: |
+        helm repo add bitnami https://charts.bitnami.com/bitnami
+        helm repo update
       run: |
         helm repo add bitnami https://charts.bitnami.com/bitnami
         helm repo update
@@ -240,16 +250,8 @@ jobs:
         # Check if namespace exists, if not create it
         kubectl get namespace api-namespace || kubectl create namespace api-namespace
 
-        # Clean up any existing failed deployments
-        kubectl delete pods --all -n api-namespace --force --grace-period=0 || true
-        kubectl delete deployment --all -n api-namespace || true
-        kubectl delete statefulset --all -n api-namespace || true
-        kubectl delete replicaset --all -n api-namespace || true
-
-        # Wait a moment for cleanup
-        sleep 10
-
         helm upgrade --install api-redis . \
+          --namespace api-namespace \
           --namespace api-namespace \
           --set api.image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }} \
           --set api.image.tag=main-${{ github.sha }} \
@@ -257,8 +259,6 @@ jobs:
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
           --set api.ingress.enabled=false \
-          --set redis.master.persistence.enabled=false \
-          --set redis.replica.persistence.enabled=false \
           --timeout=5m
 
         # Debug: Check the deployment status
