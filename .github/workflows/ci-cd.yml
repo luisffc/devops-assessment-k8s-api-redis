@@ -261,12 +261,8 @@ jobs:
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=nlb \
           --set api.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
           --set api.ingress.enabled=false \
-          --set secretsManager.enabled=true \
-          --set secretsManager.secretName="$REDIS_SECRET_NAME" \
-          --set irsa.roleArn="$API_IRSA_ROLE_ARN" \
-          --set redis.auth.enabled=true \
-          --set redis.auth.existingSecret="api-redis-api-redis-stack-redis-secret" \
-          --set redis.auth.existingSecretPasswordKey=password \
+          --set secretsManager.enabled=false \
+          --set redis.auth.enabled=false \
           --set redis.master.persistence.enabled=false \
           --set redis.replica.persistence.enabled=false \
           --timeout=5m

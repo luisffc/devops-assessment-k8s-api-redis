@@ -120,8 +120,8 @@ redis:
   enabled: true
 
   auth:
-    enabled: true  # Enable authentication
-    existingSecret: ""  # Will use the secret created by SecretProviderClass
+    enabled: false  # Disable authentication for now to get basic functionality working
+    existingSecret: ""  
     existingSecretPasswordKey: "password"
 
   architecture: standalone  # or replication for HA
