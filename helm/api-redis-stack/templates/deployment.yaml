@@ -45,7 +45,7 @@ spec:
             {{- toYaml .Values.api.resources | nindent 12 }}
           env:
             - name: REDIS_HOST
-              value: "{{ include "api-redis-stack.redis.fullname" . }}"
+              value: "{{ .Release.Name }}-master"
             - name: REDIS_PORT
               value: "6379"
             - name: CACHE_TTL
@@ -55,7 +55,7 @@ spec:
             {{- if .Values.secretsManager.enabled }}
             - name: REDIS_PASSWORD_FILE
               value: "/etc/secrets/redis-password"
-            {{- else }}
+            {{- else if .Values.redis.auth.enabled }}
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:

@@ -19,7 +19,7 @@ keywords:
   - flask
 
 maintainers:
-  - name: DevOps Team
-    email: devops@example.com
+  - name: Luis
+    email: luis@coffeetech.com.br
 
-home: https://github.com/your-org/devops-assessment-k8s-api-redis
+home: https://github.com/luisffc/devops-assessment-k8s-api-redis
